@@ -47,3 +47,28 @@ def bridge(data):
         motif_dict[frag].append(list(atom_list[i]))
 
     return mol, fragments, atom_list, bond_list
+
+def bridge_list(data_list):
+    tf = []
+    df = defaultdict(int)
+    motif_list = []
+
+    for i, data in enumerate(tqdm(data_list)):
+        motif_dict = defaultdict(list)
+        mol = get_mol(data, False)
+
+        bridge_bonds = get_bridge_bonds(mol)
+        fragments, atom_list, _ = break_bonds(mol, bridge_bonds)
+        for i, frag in enumerate(fragments):
+            motif_dict[frag].append(list(atom_list[i]))
+        motif_list.append(motif_dict)
+        mol_tf = {}
+        for fragment in fragments:
+            if fragment in mol_tf:
+                mol_tf[fragment] += 1
+            else:
+                mol_tf[fragment] = 1
+        tf.append(mol_tf)
+        for fragment in mol_tf:
+            df[fragment] += 1
+    return motif_list, df

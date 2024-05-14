@@ -10,11 +10,12 @@ from rdkit.Chem import rdmolops
 from rdkit import RDLogger
 from typing import Any
 from utils.mapping_conf import ATOM, EDGE
+from tqdm import tqdm
 
 def clean_dataset(dataset, data_name, add_H = False):
-    cleaned_data = []
-    cleaned_smiles = []
-    for data in dataset:
+    cleaned_data_0 = []
+    cleaned_data_1 = []
+    for data in tqdm(dataset):
         smiles = to_smiles(data, True, data_name, add_H=add_H)
         # smiles = sanitize_smiles(smiles)
         if smiles is not None:
@@ -22,9 +23,11 @@ def clean_dataset(dataset, data_name, add_H = False):
             new_data = to_tudataset(mol, data_name, data.y.item())
             new_smiles = to_smiles(new_data, True, data_name, add_H=add_H)
             if new_smiles == smiles:
-                cleaned_data.append(new_data)
-                cleaned_smiles.append(smiles)
-    return cleaned_data, cleaned_smiles
+                if data.y.item() == 0:
+                    cleaned_data_0.append(new_data)
+                else:
+                    cleaned_data_1.append(new_data)
+    return cleaned_data_0, cleaned_data_1
 
 def kekulize_mol(mol):
     Chem.Kekulize(mol)
