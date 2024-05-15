@@ -15,6 +15,7 @@ from utils.model import TGCN
 from utils.tree import Tree, TreeDataset
 from utils.utils import to_tudataset, get_mol, sanitize_mol, get_smiles, sanitize_smiles, can_assemble
 from utils.loader import custom_collate, DataLoader
+from utils.motif_filter import motif_filter
 from torch_geometric.data import Data, Batch
 import numpy as np
 from collections import defaultdict, deque
@@ -22,11 +23,13 @@ from tqdm import tqdm
 from rdkit import Chem
 from rdkit.Chem import rdmolops
 from sklearn.model_selection import train_test_split
+import os
 
 class MAGE:
-    def __init__(self, gnn, model, dataset, smiles_set, data_name, add_H, hidden_channels, output_channels, label, device):
+    def __init__(self, gnn, model, dataset, whole_dataset, smiles_set, data_name, add_H, hidden_channels, output_channels, label, device):
         self.gnn = gnn
         self.dataset = dataset
+        self.whole_dataset= whole_dataset
         self.smiles_set = smiles_set
         self.data_name = data_name
         self.add_H = add_H
@@ -68,9 +71,9 @@ class MAGE:
     
     def get_tree(self, data, test=False):
         # Get the tree from the dataset
-        # print(f"Data: {data}")
         tree = Tree(data, self.data_name, self.add_H)
         tree.transform()
+        # print(stop)
         node_motif_map = defaultdict(set)
         node_indices = []
         for i, motif in enumerate(tree.fragments):
@@ -239,7 +242,7 @@ class MAGE:
         # return emb_loss, pred_loss, total_acc_correct, total_acc_correct+total_acc_wrong
         # print(f"Number of valid graph decoding: {count_embedding}")
         # return topo_loss / count_topo, label_loss / count_label, pred_loss / len(tree_list), total_acc_correct, total_acc_correct+total_acc_wrong, count_positive, count_negative 
-        return topo_loss / count_topo, label_loss / count_label, pred_loss / len(tree_list), emb_loss/count_embedding, total_acc_correct, total_acc_correct+total_acc_wrong, count_positive, count_negative 
+        return topo_loss / count_topo, label_loss / count_label, pred_loss / len(tree_list), emb_loss, total_acc_correct, total_acc_correct+total_acc_wrong, count_positive, count_negative 
           
     def sample_tree(self, z_tree, max_iter, test=False):
         iter = 0
@@ -331,7 +334,6 @@ class MAGE:
                             curr_mol = mol
                             curr_edge_index = torch.cat((curr_edge_index, torch.tensor([[node[0], node[1]], [node[1], node[0]]], dtype=torch.long, device=self.device)), dim=1)
                             topo_prob = topo_pred.softmax(1)[0,1]
-
                             edge_weight = self.gumbel_softmax_edge_weight(topo_prob)
                             curr_edge_weight = torch.cat((curr_edge_weight, edge_weight.view(-1)), dim=0)
                             curr_edge_weight = torch.cat((curr_edge_weight, edge_weight.view(-1)), dim=0)
@@ -371,7 +373,7 @@ class MAGE:
             tree_emb = self.T_encoder(torch.matmul(curr_x, self.motif_embedding), curr_edge_index, curr_edge_weight, batch=batch, return_embedding=True)
         pred = self.model(tree_emb, classifier=True)
         # print(pred.size())
-        tree_pred_loss += self.criterion(pred, torch.tensor([self.label], device=self.device))
+        tree_pred_loss = self.criterion(pred, torch.tensor([self.label], device=self.device))
         acc_correct, acc_wrong = 0, 0
         if pred.argmax() == self.label:
             acc_correct = 1
@@ -533,9 +535,15 @@ class MAGE:
         gumbels = -torch.log(-torch.log(torch.rand_like(logits)))
         # print(self.mask.bool().size())
         if first_node:
-            y_soft = torch.softmax(torch.where(self.mask.bool(), (logits + gumbels) / temperature, torch.tensor(float('-inf'))), dim=-1)
+            y_soft = torch.softmax(torch.where(self.first_node_mask.bool(), (logits + gumbels) / temperature, torch.tensor(float('-inf'))), dim=-1)
         else:
             y_soft = torch.softmax((logits + gumbels) / temperature, dim=-1)
+            # y_soft = torch.softmax(torch.where(self.motif_mask.bool(), (logits + gumbels) / temperature, torch.tensor(float('-inf'))), dim=-1)
+
+            # negative_infinity = torch.tensor(float('-inf'), device=logits.device)  # Ensure tensor is on the same device as logits
+            # adjusted_logits = (logits + gumbels) / temperature
+            # adjusted_logits = torch.where(self.motif_mask, adjusted_logits, negative_infinity)
+            # y_soft = torch.softmax(adjusted_logits, dim=-1)
         y_hard = torch.zeros_like(logits).scatter_(-1, y_soft.argmax(dim=-1, keepdim=True), 1.0)
 
         # Straight-through estimator trick
@@ -560,14 +568,29 @@ class MAGE:
             
             if pred[0, self.label] > 0.99:
                 mask[0][i] = 1
-        self.mask = mask.to(self.device)
-        self.mask_pred = mask_pred
+        self.first_node_mask = mask.to(self.device)
+        # self.mask_pred = mask_pred
+
+        if os.path.exists("checkpoints/motif_selection/"+self.data_name+"_motif_"+str(self.label)+".pt"):
+            selected_motif = torch.load("checkpoints/motif_selection/"+self.data_name+"_motif_"+str(self.label)+".pt")
+        else:
+            motif_filter(self.whole_dataset, self.data_name, self.smiles_set, self.model, 2, self.device)
+            selected_motif = torch.load("checkpoints/motif_selection/"+self.data_name+"_motif_"+str(self.label)+".pt")
+        # print(f"Selected_motif: {selected_motif}")
+        mask = torch.zeros((1, len(self.motif_id)), dtype=torch.long).to(self.device)
+
+        for i, smiles in enumerate(self.motif_id.keys()):
+            if smiles in selected_motif:
+                mask[0][self.motif_id[smiles]] = 1
+        self.motif_mask = mask.bool()
+
+
     
     def train(self, epochs, batch_size, lr, max_iter, path_dict, t_encoder_path):
         # Train the MAGE model
         # For each graph use get_tree to get the tree
         self.get_motif_mask()
-        print(torch.sum(self.mask))
+        print(torch.sum(self.first_node_mask))
         
         # load the pretrained T_encoder
         self.T_encoder.load_state_dict(torch.load(t_encoder_path))
@@ -638,7 +661,7 @@ class MAGE:
                 # loss = emb_loss
                 # loss = topo_loss + label_loss + kl_tree + 10*pred_loss + emb_loss
                 # loss = topo_loss + kl_tree + 10*pred_loss + emb_loss
-                loss = kl_tree + 10*pred_loss + emb_loss
+                loss = kl_tree + pred_loss + emb_loss
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -695,7 +718,9 @@ class MAGE:
     def sample(self, num_samples, max_iter):
         # Sample explanations for the target GNN
         self.get_motif_mask()
-        print(torch.sum(self.mask))
+        print(torch.sum(self.first_node_mask))
+        print(self.motif_id)
+        print(stop)
         
         node_scores = []
         for motif in self.motif_id.keys():
@@ -710,17 +735,19 @@ class MAGE:
         self.node_scores = torch.tensor(node_scores).to(self.device)
         
         output = []
-        total_pred_prob = 0
+        total_pred_prob = []
         count_invalid = 0
         tree_correct = 0
         tree_wrong = 0
         total_prob = 0
+        count_single_node_tree = 0
         for _ in tqdm(range(num_samples)):
         # while len(output) < num_samples:
             z_tree = torch.randn(1, self.hidden_channels).to(self.device)
             tree_pred_loss, acc_correct, acc_wrong, new_tree, prob = self.sample_tree(z_tree, max_iter=max_iter, test=True)
-            # if new_tree.edge_index.size(1) == 0:
-            #     continue
+            if new_tree.edge_index.size(1) == 0:
+                count_single_node_tree += 1
+                # continue
             # print(f"Tree prob: {prob}")
             tree_correct += acc_correct
             tree_wrong += acc_wrong
@@ -728,12 +755,13 @@ class MAGE:
                 print("Wrong tree")
                 continue
             smiles, pred_prob, _ = self.decode_graph(new_tree)
-            total_pred_prob += pred_prob
+            total_pred_prob.append(pred_prob)
             total_prob += prob
             output.append(smiles)
             if not smiles:
                 count_invalid += 1
-        return output, total_pred_prob / (num_samples - count_invalid), count_invalid, total_prob / (tree_correct + tree_wrong)
+        print(f"Number of single node tree: {count_single_node_tree}")
+        return output, total_pred_prob, count_invalid, total_prob / (tree_correct + tree_wrong)
 
     def test(self, batch_size, test_set):
         test_trees = [self.get_tree(graph, True) for graph in tqdm(test_set)]

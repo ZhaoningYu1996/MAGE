@@ -45,7 +45,6 @@ def bridge(data):
     fragments, atom_list, bond_list = break_bonds(mol, bridge_bonds)
     for i, frag in enumerate(fragments):
         motif_dict[frag].append(list(atom_list[i]))
-
     return mol, fragments, atom_list, bond_list
 
 def bridge_list(data_list):

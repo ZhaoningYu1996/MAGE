@@ -224,6 +224,111 @@ ATOM = {
         63: 52,
         64: 13,
     },
+
+    'MCF-7': {
+        0: 8,   # O - Oxygen
+        1: 7,   # N - Nitrogen
+        2: 6,   # C - Carbon
+        3: 35,  # Br - Bromine
+        4: 16,  # S - Sulfur
+        5: 17,  # Cl - Chlorine
+        6: 9,   # F - Fluorine
+        7: 11,  # Na - Sodium
+        8: 78,  # Pt - Platinum
+        9: 30,  # Zn - Zinc
+        10: 28, # Ni - Nickel
+        11: 25, # Mn - Manganese
+        12: 15, # P - Phosphorus
+        13: 53, # I - Iodine
+        14: 34, # Se - Selenium
+        15: 50, # Sn - Tin
+        16: 26, # Fe - Iron
+        17: 82, # Pb - Lead
+        18: 14, # Si - Silicon
+        19: 24, # Cr - Chromium
+        20: 80, # Hg - Mercury
+        21: 33, # As - Arsenic
+        22: 5,  # B - Boron
+        23: 31, # Ga - Gallium
+        24: 22, # Ti - Titanium
+        25: 83, # Bi - Bismuth
+        26: 19, # K - Potassium
+        27: 29, # Cu - Copper
+        28: 40, # Zr - Zirconium
+        29: 77, # Ir - Iridium
+        30: 3,  # Li - Lithium
+        31: 46, # Pd - Palladium
+        32: 79, # Au - Gold
+        33: 74, # W - Tungsten
+        34: 51, # Sb - Antimony
+        35: 27, # Co - Cobalt
+        36: 12, # Mg - Magnesium
+        37: 47, # Ag - Silver
+        38: 45, # Rh - Rhodium
+        39: 44, # Ru - Ruthenium
+        40: 48, # Cd - Cadmium
+        41: 68, # Er - Erbium
+        42: 23, # V - Vanadium
+        43: 89, # Ac - Actinium
+        44: 81, # Tl - Thallium
+        45: 32  # Ge - Germanium
+    },
+
+    'Tox21_AR_training': {
+        0: 8,
+        1: 6,
+        2: 7,
+        3: 9,
+        4: 17,
+        5: 16,
+        6: 35,
+        7: 14,
+        8: 11,
+        9: 53,
+        10: 80,
+        11: 5,
+        12: 19,
+        13: 15,
+        14: 79,
+        15: 24,
+        16: 50,
+        17: 20,
+        18: 48,
+        19: 30,
+        20: 23,
+        21: 33,
+        22: 3,
+        23: 29,
+        24: 27,
+        25: 47,
+        26: 34,
+        27: 78,
+        28: 13,
+        29: 83,
+        30: 51,
+        31: 56,
+        32: 26,
+        33: 1,
+        34: 22,
+        35: 81,
+        36: 38,
+        37: 49,
+        38: 42,
+        39: 28,
+        40: 4,
+        41: 12,
+        42: 60,
+        43: 46,
+        44: 25,
+        45: 40,
+        46: 82,
+        47: 70,
+        48: 42,
+        49: 32,
+        50: 44,
+        51: 63,
+        52: 21,
+    },
     
     'COX2_MD': {
         0: 6,
@@ -322,6 +427,19 @@ EDGE = {
         0: rdchem.BondType.SINGLE,
         1: rdchem.BondType.DOUBLE,
         2: rdchem.BondType.TRIPLE,
+    },
+
+    'MCF-7': {
+        0: rdchem.BondType.SINGLE,
+        1: rdchem.BondType.DOUBLE,
+        2: rdchem.BondType.TRIPLE,
+    },
+
+    'Tox21_AR_training': {
+        0: rdchem.BondType.SINGLE,
+        1: rdchem.BondType.DOUBLE,
+        2: rdchem.BondType.AROMATIC,
+        3: rdchem.BondType.TRIPLE,
     },
     
     'COX2_MD': {

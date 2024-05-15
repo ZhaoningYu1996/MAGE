@@ -15,7 +15,9 @@ from tqdm import tqdm
 def clean_dataset(dataset, data_name, add_H = False):
     cleaned_data_0 = []
     cleaned_data_1 = []
-    for data in tqdm(dataset):
+    id_0 = []
+    id_1 = []
+    for i, data in enumerate(tqdm(dataset)):
         smiles = to_smiles(data, True, data_name, add_H=add_H)
         # smiles = sanitize_smiles(smiles)
         if smiles is not None:
@@ -25,9 +27,11 @@ def clean_dataset(dataset, data_name, add_H = False):
             if new_smiles == smiles:
                 if data.y.item() == 0:
                     cleaned_data_0.append(new_data)
+                    id_0.append(i)
                 else:
                     cleaned_data_1.append(new_data)
-    return cleaned_data_0, cleaned_data_1
+                    id_1.append(i)
+    return cleaned_data_0, cleaned_data_1, (id_0, id_1)
 
 def kekulize_mol(mol):
     Chem.Kekulize(mol)

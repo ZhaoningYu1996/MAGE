@@ -14,6 +14,7 @@ class Tree:
     
     def transform(self):
         # Transform the SMILES into a motif tree structure
+        # print(f"smiles: {self.smiles}")
         mol, fragments, atom_list, bond_list = bridge(self.smiles)
         self.mol = mol
         self.fragments = fragments

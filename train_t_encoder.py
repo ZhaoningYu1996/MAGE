@@ -5,10 +5,10 @@ import torch.nn as nn
 from torch.nn import Linear
 import torch.nn.functional as F
 from utils.model import GCN
-from utils.utils import sanitize_smiles, to_smiles
 from torch_geometric.data import DataLoader
 from new_mage import MAGE
 import argparse
+from utils.utils import sanitize_smiles, to_smiles
 
 
 # Create an argument parser
@@ -57,7 +57,6 @@ for data in dataset:
     smiles_set.append(smiles)
     if pred.softmax(1)[0][args.label].item() > 0.9:
         new_dataset.append(data)
-        
         count += 1
         prob += pred.softmax(1)[0][args.label].item()
 # print(f'Accuracy: {count/len(dataset)}')
@@ -66,18 +65,8 @@ for data in dataset:
 print(len(new_dataset))
 # print(stop)
 print(f"Label: {args.label}")
-print(f"Whole dataset: {len(dataset), len(smiles_set)}")
 
 # Initialize the Mage class
 mage = MAGE(gnn=model, model=model, dataset=new_dataset, whole_dataset=dataset, smiles_set=smiles_set, data_name=args.data_name, add_H=False, label=args.label, hidden_channels=args.hidden_channels, output_channels=args.output_channels, device=device)
 
-path_dict = {
-    'T_encoder': f'checkpoints/models/{args.data_name}_label_{args.label}_T_encoder.pth', 
-    'pred_node_topo': f'checkpoints/models/{args.data_name}_label_{args.label}_pred_node_topo.pth', 
-    'pred_node_label': f'checkpoints/models/{args.data_name}_label_{args.label}_pred_node_label.pth', 
-    'linear_topo': f'checkpoints/models/{args.data_name}_label_{args.label}_linear_topo.pth', 
-    'linear_label': f'checkpoints/models/{args.data_name}_label_{args.label}_linear_label.pth', 
-    'T_mean': f'checkpoints/models/{args.data_name}_label_{args.label}_T_mean.pth', 
-    'T_var': f'checkpoints/models/{args.data_name}_label_{args.label}_T_var.pth'}
-
-mage.train(epochs=100, batch_size=32, lr=0.0005, max_iter=5, path_dict=path_dict, t_encoder_path=f'checkpoints/models/{args.data_name}_label_{args.label}_T_encoder.pth')
+mage.train_t_encoder(epochs=300, lr=0.0001, batch_size=32, save_path=f'checkpoints/models/{args.data_name}_label_{args.label}_T_encoder.pth')
