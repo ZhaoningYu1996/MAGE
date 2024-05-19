@@ -13,12 +13,12 @@ import argparse
 
 # Create an argument parser
 parser = argparse.ArgumentParser(description='Train target model')
-parser.add_argument('--data_name', type=str, default='MCF-7', help='Name of the dataset')
-parser.add_argument('--input_channels', type=int, default=46, help='Number of input channels')
+parser.add_argument('--data_name', type=str, default='Mutagenicity', help='Name of the dataset')
+parser.add_argument('--input_channels', type=int, default=14, help='Number of input channels')
 parser.add_argument('--hidden_channels', type=int, default=64, help='Number of hidden channels')
 parser.add_argument('--output_channels', type=int, default=2, help='Number of output channels')
-parser.add_argument('--target_model', type=str, default='checkpoints/models/MCF-7_model.pth', help='Path to the pretrained GNN model')
-parser.add_argument('--dataset', type=str, default='checkpoints/datasets/MCF-7.pt', help='Path to the dataset')
+parser.add_argument('--target_model', type=str, default='checkpoints/models/Mutagenicity_model.pth', help='Path to the pretrained GNN model')
+parser.add_argument('--dataset', type=str, default='checkpoints/datasets/Mutagenicity.pt', help='Path to the dataset')
 parser.add_argument('--label', type=int, default=0, help='Label of the data')
 
 # Parse the arguments
@@ -80,4 +80,4 @@ path_dict = {
     'T_mean': f'checkpoints/models/{args.data_name}_label_{args.label}_T_mean.pth', 
     'T_var': f'checkpoints/models/{args.data_name}_label_{args.label}_T_var.pth'}
 
-mage.train(epochs=100, batch_size=32, lr=0.0005, max_iter=5, path_dict=path_dict, t_encoder_path=f'checkpoints/models/{args.data_name}_label_{args.label}_T_encoder.pth')
+mage.train(epochs=5, batch_size=320, lr=0.0005, max_iter=5, path_dict=path_dict, t_encoder_path=f'checkpoints/models/{args.data_name}_label_{args.label}_T_encoder.pth')

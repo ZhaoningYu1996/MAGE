@@ -8,7 +8,7 @@ import random
 
 # Create an argument parser
 parser = argparse.ArgumentParser(description='Train target model')
-parser.add_argument('--data_name', type=str, default='MCF-7', help='Name of the dataset')
+parser.add_argument('--data_name', type=str, default='PTC_FM', help='Name of the dataset')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -92,12 +92,13 @@ def train():
 # Define a test function
 def test(loader):
     model.eval()
-    correct = 0
-    for data in loader:
-        data = data.to(device)
-        out = model(data.x, data.edge_index, data.batch)
-        pred = out.argmax(dim=1)
-        correct += int((pred == data.y).sum())
+    with torch.no_grad():
+        correct = 0
+        for data in loader:
+            data = data.to(device)
+            out = model(data.x, data.edge_index, data.batch)
+            pred = out.argmax(dim=1)
+            correct += int((pred == data.y).sum())
     return correct / len(loader.dataset)
 
 # Train the model and save the best model

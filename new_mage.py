@@ -537,8 +537,8 @@ class MAGE:
         if first_node:
             y_soft = torch.softmax(torch.where(self.first_node_mask.bool(), (logits + gumbels) / temperature, torch.tensor(float('-inf'))), dim=-1)
         else:
-            y_soft = torch.softmax((logits + gumbels) / temperature, dim=-1)
-            # y_soft = torch.softmax(torch.where(self.motif_mask.bool(), (logits + gumbels) / temperature, torch.tensor(float('-inf'))), dim=-1)
+            # y_soft = torch.softmax((logits + gumbels) / temperature, dim=-1)
+            y_soft = torch.softmax(torch.where(self.motif_mask.bool(), (logits + gumbels) / temperature, torch.tensor(float('-inf'))), dim=-1)
 
             # negative_infinity = torch.tensor(float('-inf'), device=logits.device)  # Ensure tensor is on the same device as logits
             # adjusted_logits = (logits + gumbels) / temperature
@@ -719,7 +719,6 @@ class MAGE:
         # Sample explanations for the target GNN
         self.get_motif_mask()
         print(torch.sum(self.first_node_mask))
-        print(self.motif_id)
         print(stop)
         
         node_scores = []
