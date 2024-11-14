@@ -1,6 +1,11 @@
 # MAGE
 
-To Reproduce the results from paper.
+To Create an environment:
+```bash
+conda env create -f environment.yml
+```
+
+To Reproduce the results of paper:
 Please run 
 ```bash
 python sample.py
