@@ -242,7 +242,8 @@ class MAGE:
         # return emb_loss, pred_loss, total_acc_correct, total_acc_correct+total_acc_wrong
         # print(f"Number of valid graph decoding: {count_embedding}")
         # return topo_loss / count_topo, label_loss / count_label, pred_loss / len(tree_list), total_acc_correct, total_acc_correct+total_acc_wrong, count_positive, count_negative 
-        return topo_loss / count_topo, label_loss / count_label, pred_loss / len(tree_list), emb_loss, total_acc_correct, total_acc_correct+total_acc_wrong, count_positive, count_negative 
+        return topo_loss / count_topo, label_loss / count_label, pred_loss / len(tree_list), emb_loss, total_acc_correct, total_acc_correct+total_acc_wrong, count_positive, count_negative
+        # return pred_loss/len(tree_list)+emb_loss, total_acc_correct, total_acc_correct+total_acc_wrong, count_positive, count_negative 
           
     def sample_tree(self, z_tree, max_iter, test=False):
         iter = 0
@@ -537,8 +538,8 @@ class MAGE:
         if first_node:
             y_soft = torch.softmax(torch.where(self.first_node_mask.bool(), (logits + gumbels) / temperature, torch.tensor(float('-inf'))), dim=-1)
         else:
-            # y_soft = torch.softmax((logits + gumbels) / temperature, dim=-1)
-            y_soft = torch.softmax(torch.where(self.motif_mask.bool(), (logits + gumbels) / temperature, torch.tensor(float('-inf'))), dim=-1)
+            y_soft = torch.softmax((logits + gumbels) / temperature, dim=-1)
+            # y_soft = torch.softmax(torch.where(self.motif_mask.bool(), (logits + gumbels) / temperature, torch.tensor(float('-inf'))), dim=-1)
 
             # negative_infinity = torch.tensor(float('-inf'), device=logits.device)  # Ensure tensor is on the same device as logits
             # adjusted_logits = (logits + gumbels) / temperature
@@ -601,21 +602,7 @@ class MAGE:
         # check if fix is ok
         for param in self.T_encoder.parameters():
             print(param.requires_grad)
-        
-        import matplotlib.pyplot as plt
-
-        # Calculate the count distribution
-        count_distribution = [tree.x.shape[0] for tree in self.trees]
-
-        # Plot the count distribution
-        plt.hist(count_distribution, bins=10)
-        plt.xlabel('Tree Length')
-        plt.ylabel('Frequency')
-        plt.title('Distribution of Tree Length')
-        plt.savefig('plot/distribution.pdf')
-        plt.close()
-        # print(stop)
-        
+   
         # self.get_motif_embedding()
         # Create the dataloader for the trees
         # tree_dataset = TreeDataset(trees)
@@ -648,27 +635,28 @@ class MAGE:
                 # z_graph, kl_graph = self.rsample(graph_emb, self.G_mean, self.G_var)
                 with torch.no_grad():
                     tree_emb = self.encode_tree(t_data)
-                z_tree, kl_tree = self.rsample(tree_emb, self.T_mean, self.T_var)
+                z_tree, kl_loss = self.rsample(tree_emb, self.T_mean, self.T_var)
                 
-                # topo_loss, label_loss, emb_loss, pred_loss, acc, count, graph_pred, graph_sample_count = self.decode_tree(t_data, g_data, z_tree)
-                # emb_loss, pred_loss, acc, count = self.decode_tree(t_data, g_data, z_tree)
-                # topo_loss, label_loss, pred_loss, acc, count, count_positive, count_negative = self.decode_tree(t_data, g_data, z_tree, max_iter)
+                # loss_p, acc, count, count_positive, count_negative = self.decode_tree(t_data, g_data, z_tree, max_iter)
                 topo_loss, label_loss, pred_loss, emb_loss, acc, count, count_positive, count_negative = self.decode_tree(t_data, g_data, z_tree, max_iter)
-                # loss = 0.1*topo_loss + 0.2*label_loss + 0.1*kl_tree + 0.2*emb_loss + 0.4*pred_loss
+                # loss = 0.5*topo_loss + 0.5*label_loss + kl_tree + emb_loss + pred_loss
                 # loss = kl_tree + 5*emb_loss + 10*pred_loss
                 # loss = topo_loss + label_loss + kl_tree + 10*pred_loss
                 # loss = 0.3*pred_loss + 0.7*emb_loss
                 # loss = emb_loss
                 # loss = topo_loss + label_loss + kl_tree + 10*pred_loss + emb_loss
                 # loss = topo_loss + kl_tree + 10*pred_loss + emb_loss
-                loss = kl_tree + pred_loss + emb_loss
+                # loss = kl_tree + pred_loss + emb_loss + topo_loss
+                # loss = 0.6*loss_p + 0.4*loss_r
+                loss = 1*topo_loss + 0.1*label_loss + pred_loss + emb_loss
+                # loss = kl_tree + topo_loss + label_loss + pred_loss + emb_loss
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
                 total_topo_loss += topo_loss.item()
                 total_label_loss += label_loss.item()
-                total_kl_loss += kl_tree.item()
+                total_kl_loss += kl_loss.item()
                 if emb_loss != 0:
                     total_emb_loss += emb_loss.item()
                 # print(pred_loss)
@@ -695,8 +683,8 @@ class MAGE:
         self.T_mean.load_state_dict(torch.load(path_dict['T_mean']))
         self.T_var.load_state_dict(torch.load(path_dict['T_var']))
 
-        for param in self.T_encoder.parameters():
-            print(param.requires_grad)
+        # for param in self.T_encoder.parameters():
+        #     print(param.requires_grad)
         self.T_encoder.eval()
         self.pred_node_topo.eval()
         self.pred_node_label.eval()
@@ -718,8 +706,6 @@ class MAGE:
     def sample(self, num_samples, max_iter):
         # Sample explanations for the target GNN
         self.get_motif_mask()
-        print(torch.sum(self.first_node_mask))
-        print(stop)
         
         node_scores = []
         for motif in self.motif_id.keys():
@@ -798,9 +784,9 @@ class MAGE:
         test_loader = DataLoader(test_trees, batch_size=batch_size, shuffle=False, collate_fn=custom_collate)
         optimizer = torch.optim.Adam(self.T_encoder.parameters(), lr=lr)
         best_loss = float('inf')
-        for epoch in range(epochs):
+        for epoch in tqdm(range(epochs)):
             total_loss = 0
-            for t_data, g_data in tqdm(train_loader):
+            for t_data, g_data in (train_loader):
                 t_data.to(self.device)
                 g_data.to(self.device)
                 tree_emb = self.encode_tree(t_data)
@@ -810,17 +796,17 @@ class MAGE:
                 loss.backward()
                 optimizer.step()
                 total_loss += loss.item()
-            print(f'Epoch {epoch}, Loss: {total_loss/len(train_loader)}')
+            # print(f'Epoch {epoch}, Loss: {total_loss/len(train_loader)}')
             self.T_encoder.eval()
             total_loss = 0
-            for t_data, g_data in tqdm(test_loader):
+            for t_data, g_data in (test_loader):
                 t_data.to(self.device)
                 g_data.to(self.device)
                 tree_emb = self.encode_tree(t_data)
                 graph_emb = self.encode_graph(g_data)
                 loss = self.mse_loss(tree_emb, graph_emb)
                 total_loss += loss.item()
-            print(f'Test Loss: {total_loss/len(test_loader)}')
+            # print(f'Test Loss: {total_loss/len(test_loader)}')
             if total_loss < best_loss:
                 best_loss = total_loss
                 torch.save(self.T_encoder.state_dict(), save_path)

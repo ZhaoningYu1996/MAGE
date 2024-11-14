@@ -8,7 +8,7 @@ import random
 
 # Create an argument parser
 parser = argparse.ArgumentParser(description='Train target model')
-parser.add_argument('--data_name', type=str, default='PTC_FM', help='Name of the dataset')
+parser.add_argument('--data_name', type=str, default='NCI-H23', help='Name of the dataset')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -25,7 +25,7 @@ print(len(cleaned_dataset_0), len(cleaned_dataset_1))
 cleaned_dataset_0, id_0 = zip(*sorted(zip(cleaned_dataset_0, all_id[0]), key=lambda x: -x[0].num_nodes))
 cleaned_dataset_1, id_1 = zip(*sorted(zip(cleaned_dataset_1, all_id[1]), key=lambda x: -x[0].num_nodes))
 print(cleaned_dataset_0[:2], id_0[:2])
-# print(stop)
+print(stop)
 
 if len(cleaned_dataset_0) > len(cleaned_dataset_1):
     cleaned_dataset_0 = list(cleaned_dataset_0[:len(cleaned_dataset_1)])
@@ -92,17 +92,16 @@ def train():
 # Define a test function
 def test(loader):
     model.eval()
-    with torch.no_grad():
-        correct = 0
-        for data in loader:
-            data = data.to(device)
-            out = model(data.x, data.edge_index, data.batch)
-            pred = out.argmax(dim=1)
-            correct += int((pred == data.y).sum())
+    correct = 0
+    for data in loader:
+        data = data.to(device)
+        out = model(data.x, data.edge_index, data.batch)
+        pred = out.argmax(dim=1)
+        correct += int((pred == data.y).sum())
     return correct / len(loader.dataset)
 
 # Train the model and save the best model
-best_val_acc = test_acc = 0
+best_val_acc = 0
 for epoch in range(1, 201):
     loss = train()
     train_acc = test(train_loader)
@@ -111,4 +110,4 @@ for epoch in range(1, 201):
         best_val_acc = val_acc
         # test_acc = test(test_loader)
         torch.save(model.state_dict(), f'checkpoints/models/{args.data_name}_model.pth')
-    print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}, Test Acc: {test_acc:.4f}')
+    print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Train Acc: {train_acc:.4f}, Val Acc: {val_acc:.4f}')

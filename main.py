@@ -24,8 +24,8 @@ parser.add_argument('--label', type=int, default=0, help='Label of the data')
 # Parse the arguments
 args = parser.parse_args()
 
-# device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-device = 'cpu'
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+# device = 'cpu'
 
 # Initialize the GNN model
 model = GCN(input_channels=args.input_channels, hidden_channels=args.hidden_channels, output_channels=args.output_channels).to(device)
@@ -52,8 +52,6 @@ for data in dataset:
     pred = model(data.x.to(device), data.edge_index.to(device), batch=batch)
     smiles = to_smiles(data, data_name=args.data_name)
     smiles = sanitize_smiles(smiles)
-    if not smiles:
-        print(stop)
     smiles_set.append(smiles)
     if pred.softmax(1)[0][args.label].item() > 0.9:
         new_dataset.append(data)
@@ -71,6 +69,9 @@ print(f"Whole dataset: {len(dataset), len(smiles_set)}")
 # Initialize the Mage class
 mage = MAGE(gnn=model, model=model, dataset=new_dataset, whole_dataset=dataset, smiles_set=smiles_set, data_name=args.data_name, add_H=False, label=args.label, hidden_channels=args.hidden_channels, output_channels=args.output_channels, device=device)
 
+# Train a teacher encoder
+mage.train_t_encoder(epochs=300, lr=0.0001, batch_size=32, save_path=f'checkpoints/models/{args.data_name}_label_{args.label}_T_encoder.pth')
+
 path_dict = {
     'T_encoder': f'checkpoints/models/{args.data_name}_label_{args.label}_T_encoder.pth', 
     'pred_node_topo': f'checkpoints/models/{args.data_name}_label_{args.label}_pred_node_topo.pth', 
@@ -80,4 +81,4 @@ path_dict = {
     'T_mean': f'checkpoints/models/{args.data_name}_label_{args.label}_T_mean.pth', 
     'T_var': f'checkpoints/models/{args.data_name}_label_{args.label}_T_var.pth'}
 
-mage.train(epochs=5, batch_size=320, lr=0.0005, max_iter=5, path_dict=path_dict, t_encoder_path=f'checkpoints/models/{args.data_name}_label_{args.label}_T_encoder.pth')
+mage.train(epochs=10, batch_size=320, lr=0.0005, max_iter=5, path_dict=path_dict, t_encoder_path=f'checkpoints/models/{args.data_name}_label_{args.label}_T_encoder.pth')

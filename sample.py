@@ -14,13 +14,13 @@ import numpy as np
 
 # Create an argument parser
 parser = argparse.ArgumentParser(description='Train target model')
-parser.add_argument('--data_name', type=str, default='PTC_FM', help='Name of the dataset')
-parser.add_argument('--input_channels', type=int, default=18, help='Number of input channels')
+parser.add_argument('--data_name', type=str, default='Mutagenicity', help='Name of the dataset')
+parser.add_argument('--input_channels', type=int, default=14, help='Number of input channels')
 parser.add_argument('--hidden_channels', type=int, default=64, help='Number of hidden channels')
 parser.add_argument('--output_channels', type=int, default=2, help='Number of output channels')
-parser.add_argument('--target_model', type=str, default='checkpoints/models/PTC_FM_model.pth', help='Path to the pretrained GNN model')
-parser.add_argument('--dataset', type=str, default='checkpoints/datasets/PTC_FM.pt', help='Path to the dataset')
-parser.add_argument('--label', type=int, default=0, help='Label of the data')
+parser.add_argument('--target_model', type=str, default='checkpoints/models/Mutagenicity_model.pth', help='Path to the pretrained GNN model')
+parser.add_argument('--dataset', type=str, default='checkpoints/datasets/Mutagenicity.pt', help='Path to the dataset')
+parser.add_argument('--label', type=int, default=1, help='Label of the data')
 
 # Parse the arguments
 args = parser.parse_args()
@@ -75,7 +75,7 @@ path_dict = {
 
 mage.load(path_dict)
 
-sampled_data, pred_prob, invalid_count, tree_acc = mage.sample(1000, max_iter=3)
+sampled_data, pred_prob, invalid_count, tree_acc = mage.sample(1000, max_iter=5)
 
 # Count how many unique smiles in saampled_data
 unique_smiles = set()
