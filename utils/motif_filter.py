@@ -204,7 +204,7 @@ def motif_filter(train_list, data_name, train_smiles_list, target_model, num_cla
     # print(len(final_motif_0))
     # print(stop)
     for i, score in enumerate(label_1_score):
-        if score > 0.00:
+        if score > 0.0:
             final_motif_1.append(sorted_label_1[i])
 
     print(len(label_0_score))

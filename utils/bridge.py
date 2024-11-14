@@ -71,3 +71,10 @@ def bridge_list(data_list):
         for fragment in mol_tf:
             df[fragment] += 1
     return motif_list, df
+
+def do_bridge(data):
+    mol = get_mol(data, False)
+    num_atoms = mol.GetNumAtoms()
+    bridge_bonds = get_bridge_bonds(mol)
+    fragments, atom_list, bond_list = break_bonds(mol, bridge_bonds)
+    return num_atoms
