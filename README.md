@@ -8,6 +8,6 @@ python sample.py
 
 To Run MAGE on personal dataset:
 
-Run `python train_target_model.py`{:.bash} to create a new pretrained GNN.
+Run `python train_target_model.py` to create a new pretrained GNN.
 
-Run `python main.py`{:.bash} to generate explanations of the target GNN.
+Run `python main.py` to generate explanations of the target GNN.
