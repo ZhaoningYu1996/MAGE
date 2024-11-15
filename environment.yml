@@ -129,4 +129,4 @@ dependencies:
     - rdkit-pypi==2022.9.5
     - six==1.16.0
     - zipp==3.18.1
-prefix: /home/znyu/anaconda3/envs/mage
+prefix: /home/anaconda3/envs/mage
