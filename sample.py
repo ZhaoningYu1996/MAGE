@@ -37,7 +37,6 @@ model.eval()
 
 # Load the dataset from checkpoints
 dataset = torch.load(args.dataset)
-print(len(dataset))
 
 new_dataset = []
 count = 0
@@ -49,17 +48,13 @@ for data in dataset:
     smiles = to_smiles(data, data_name=args.data_name)
     smiles = sanitize_smiles(smiles)
     if not smiles:
-        print(stop)
+        continue
     smiles_set.append(smiles)
     if pred.argmax().item() == args.label:
         if pred.softmax(1)[0][args.label].item() > 0.9:
             new_dataset.append(data)
             count += 1
             prob += pred.softmax(1)[0][args.label].item()
-
-print(f"Label: {args.label}")
-print(len(new_dataset))
-# print(stop)
 
 # Initialize the Mage class
 mage = MAGE(gnn=model, model=model, dataset=new_dataset, whole_dataset=dataset, smiles_set=smiles_set, data_name=args.data_name, add_H=False, label=args.label, hidden_channels=args.hidden_channels, output_channels=args.output_channels, device=device)
@@ -77,11 +72,6 @@ mage.load(path_dict)
 
 sampled_data, pred_prob, invalid_count, tree_acc = mage.sample(1000, max_iter=5)
 
-# Count how many unique smiles in saampled_data
-unique_smiles = set()
-for data in sampled_data:
-    unique_smiles.add(data)
-
 mean = np.mean(pred_prob)
 std = np.std(pred_prob)
 # write sampled data to a file
@@ -89,11 +79,7 @@ with open(f'sampled_data/{args.data_name}_label_{args.label}_sampled_data.txt', 
     for data in sampled_data:
         f.write(f'{data}\n')
 
-print(f'Unique smiles: {len(unique_smiles)}')
-print(f"Unique rate: {len(unique_smiles)/len(sampled_data)}")
-print(f'Sampled data: {sampled_data[:10]}')
 print(f'Invalid count: {invalid_count}')
 print(f'Predicted probability mean: {mean}')
 print(f'STD: {std}')
-print(f'Tree accuracy: {tree_acc}')
 
